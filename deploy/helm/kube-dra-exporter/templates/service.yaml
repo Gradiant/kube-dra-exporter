@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "kube-dra-exporter.fullname" . }}
+  namespace: {{ include "kube-dra-exporter.namespace" . }}
+{{- with .Values.serviceAnnotations }}
+  annotations:
+{{ toYaml . | indent 4 }}
+{{- end }}
+  labels:
+    app: {{ include "kube-dra-exporter.name" . }}
+    app.kubernetes.io/name: {{ include "kube-dra-exporter.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: "main"
+    {{- include "labels" . | nindent 4 }}
+    {{- with .Values.serviceLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  type: ClusterIP
+  {{- if .Values.serviceIPFamilyPolicy }}
+  ipFamilyPolicy: {{ .Values.serviceIPFamilyPolicy }}
+  {{- end }}
+  {{- if .Values.serviceIPFamilies }}
+  ipFamilies: {{ .Values.serviceIPFamilies | toYaml | nindent 2 }}
+  {{- end }}
+  ports:
+  - protocol: TCP
+    port: 8080
+    name: http
+    targetPort: http
+  selector:
+    app.kubernetes.io/name: {{ include "kube-dra-exporter.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: "main"

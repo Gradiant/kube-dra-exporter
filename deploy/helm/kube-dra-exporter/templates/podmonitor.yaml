@@ -1,0 +1,54 @@
+{{- if and .Values.prometheus.enabled (and .Values.prometheus.podmonitor.enabled .Values.prometheus.servicemonitor.enabled) }}
+{{- fail "Either .Values.prometheus.podmonitor.enabled or .Values.prometheus.servicemonitor.enabled can be enabled at a time, but not both." }}
+{{- else if and .Values.prometheus.enabled .Values.prometheus.podmonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ template "kube-dra-exporter.fullname" . }}
+{{- if .Values.prometheus.podmonitor.namespace }}
+  namespace: {{ .Values.prometheus.podmonitor.namespace }}
+{{- else }}
+  namespace: {{ include "kube-dra-exporter.namespace" . }}
+{{- end }}
+  labels:
+    app: {{ include "kube-dra-exporter.name" . }}
+    app.kubernetes.io/name: {{ include "kube-dra-exporter.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: "main"
+    {{- include "labels" . | nindent 4 }}
+    prometheus: {{ .Values.prometheus.podmonitor.prometheusInstance }}
+    {{- with .Values.prometheus.podmonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- if .Values.prometheus.podmonitor.annotations }}
+  annotations:
+    {{- with .Values.prometheus.podmonitor.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}
+spec:
+  jobLabel: app.kubernetes.io/name
+  selector:
+    matchLabels:
+    {{- with .Values.prometheus.podmonitor.selectorOverride }}
+      {{- toYaml . | nindent 6 }}
+    {{- else }}
+      app.kubernetes.io/name: {{ template "kube-dra-exporter.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: "main"
+    {{- end }}
+{{- if .Values.prometheus.podmonitor.namespace }}
+  namespaceSelector:
+    matchNames:
+      - {{ include "kube-dra-exporter.namespace" . }}
+{{- end }}
+  podMetricsEndpoints:
+    - port: http
+      path: {{ .Values.prometheus.podmonitor.path }}
+      interval: {{ .Values.prometheus.podmonitor.interval }}
+      scrapeTimeout: {{ .Values.prometheus.podmonitor.scrapeTimeout }}
+      honorLabels: {{ .Values.prometheus.podmonitor.honorLabels }}
+      {{- with .Values.prometheus.podmonitor.endpointAdditionalProperties }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+{{- end }}

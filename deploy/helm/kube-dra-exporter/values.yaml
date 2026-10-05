@@ -1,0 +1,645 @@
+# +docs:section=Global
+
+# Default values for kube-dra-exporter.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+global:
+  # Reference to one or more secrets to be used when pulling images.
+  # For more information, see [Pull an Image from a Private Registry](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/).
+  #
+  # For example:
+  #  imagePullSecrets:
+  #    - name: "image-pull-secret"
+  imagePullSecrets: []
+
+  # Global node selector
+  #
+  # The nodeSelector on Pods tells Kubernetes to schedule Pods on the nodes with
+  # matching labels.
+  # For more information, see [Assigning Pods to Nodes](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/).
+  #
+  # If a component-specific nodeSelector is also set, it will be merged and take precedence.
+  # +docs:property
+  nodeSelector: {}
+
+  # Labels to apply to all resources.
+  # These labels are also applied to dynamically-created ACME HTTP01 solver resources
+  # (pods, services, ingresses, or Gateway API HTTPRoutes).
+  # The following ACME identity label keys are reserved and will be
+  # silently ignored on dynamically-created resources: acme.kube-dra-exporter.io/http-domain,
+  # acme.kube-dra-exporter.io/http-token, acme.kube-dra-exporter.io/http01-solver.
+  # For per-Issuer-specific labels, use the HTTP01 ingress solver podTemplate and
+  # ingressTemplate fields for pod/ingress resources, or the gatewayHTTPRoute
+  # solver labels field for Gateway API HTTPRoute resources.
+  commonLabels: {}
+
+  # The number of old ReplicaSets to retain to allow rollback (if not set, the default Kubernetes value is set to 10).
+  # +docs:property
+  # revisionHistoryLimit: 1
+
+  # The optional priority class to be used for the kube-dra-exporter pods.
+  priorityClassName: ""
+
+  # Set all pods to run in a user namespace without host access.
+  # Experimental: may be removed once the Kubernetes User Namespaces feature is GA.
+  #
+  # Requirements:
+  #   - Kubernetes ≥ 1.33, or
+  #   - Kubernetes 1.27–1.32 with UserNamespacesSupport feature gate enabled.
+  #
+  # Set to false to run pods in a user namespace without host access.
+  #
+  # See [limitations](https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/#limitations) for details.
+  # +docs:property
+  # hostUsers: false
+
+# +docs:section=app
+
+# The number of replicas of the kube-dra-exporter app to run.
+#
+# The default is 1, but in production set this to 2 or 3 to provide high
+# availability.
+#
+# If `replicas > 1`, consider setting `podDisruptionBudget.enabled=true`.
+#
+# All replicas collect independently; the exporter does not use leader election.
+# Avoid summing duplicate resource metrics scraped from multiple replicas.
+replicaCount: 1
+
+# Deployment update strategy for the kube-dra-exporter app deployment.
+# For more information, see the [Kubernetes documentation](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy).
+#
+# For example:
+#  strategy:
+#    type: RollingUpdate
+#    rollingUpdate:
+#      maxSurge: 0
+#      maxUnavailable: 1
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+podDisruptionBudget:
+  # Enable or disable the PodDisruptionBudget resource.
+  #
+  # This prevents downtime during voluntary disruptions such as during a Node upgrade.
+  # For example, the PodDisruptionBudget will block `kubectl drain`
+  # if it is used on the Node where the only remaining kube-dra-exporter
+  # Pod is currently running.
+  enabled: false
+
+  # This configures the minimum available pods for disruptions. It can either be set to
+  # an integer (e.g., 1) or a percentage value (e.g., 25%).
+  # It cannot be used if `maxUnavailable` is set.
+  # +docs:property
+  # +docs:type=unknown
+  # Defaults to 1 when neither limit is set.
+  # minAvailable: 1
+
+  # This configures the maximum unavailable pods for disruptions. It can either be set to
+  # an integer (e.g., 1) or a percentage value (e.g., 25%).
+  # it cannot be used if `minAvailable` is set.
+  # +docs:property
+  # +docs:type=unknown
+  # maxUnavailable: 1
+
+  # This configures how to act with unhealthy pods during eviction
+  # Note that this requires Kubernetes 1.31 or `PDBUnhealthyPodEvictionPolicy` feature gate enabled for
+  # the cluster to work.
+  # +docs:property
+  # +docs:type=string
+  # unhealthyPodEvictionPolicy: AlwaysAllow
+
+# The container registry used for all kube-dra-exporter images by default.
+# This can include path prefixes (e.g. `artifactory.example.com/docker`).
+# +docs:property
+imageRegistry: ghcr.io
+
+# The repository namespace used for all kube-dra-exporter images by default.
+# Examples:
+# - jetstack
+# - kube-dra-exporter
+# +docs:property
+imageNamespace: gradiant
+
+image:
+  # The image name for the kube-dra-exporter app.
+  # This is used (together with `imageRegistry` and `imageNamespace`) to construct the full image reference.
+  # +docs:property
+  name: kube-dra-exporter
+
+  # Full repository override (takes precedence over `imageRegistry`, `imageNamespace`, and `image.name`).
+  # Example: quay.io/jetstack/kube-dra-exporter
+  # +docs:property
+  repository: ""
+
+  # Override the image tag to deploy by setting this variable.
+  # If no value is set, the chart's appVersion is used.
+  # +docs:property
+  tag: ""
+
+  # Setting a digest pins the image. If a tag is also set, the rendered reference will include
+  # both ("image:tag@digest"), though only the digest will be used for pulling.
+  # +docs:property
+  # digest: sha256:0e072dddd1f7f8fc8909a2ca6f65e76c5f0d2fcfb8be47935ae3457e8bbceb20
+
+  # Kubernetes imagePullPolicy on Deployment.
+  pullPolicy: IfNotPresent
+
+# Override the namespace used to store DNS provider credentials etc. for ClusterIssuer
+# resources. By default, the same namespace as kube-dra-exporter is deployed within is
+# used. This namespace will not be automatically created by the Helm chart.
+clusterResourceNamespace: ""
+
+# This namespace allows you to define where the services are installed into.
+# If not set then they use the namespace of the release.
+# This is helpful when installing cert manager as a chart dependency (sub chart).
+namespace: ""
+
+# Override the "kube-dra-exporter.fullname" value. This value is used as part of
+# most of the names of the resources created by this Helm chart.
+# +docs:property
+# fullnameOverride: "my-kube-dra-exporter"
+
+# Override the "kube-dra-exporter.name" value, which is used to annotate some of
+# the resources that are created by this Chart (using "app.kubernetes.io/name").
+# NOTE: There are some inconsistencies in the Helm chart when it comes to
+# these annotations (some resources use, e.g., "cainjector.name" which resolves
+# to the value "cainjector").
+# +docs:property
+# nameOverride: "my-kube-dra-exporter"
+
+serviceAccount:
+  # Specifies whether a service account should be created.
+  create: true
+
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template.
+  # +docs:property
+  # name: ""
+
+  # Optional additional annotations to add to the app's Service Account. Templates are allowed for both keys and values.
+  # Example using templating:
+  # annotations:
+  #   "{{ .Chart.Name }}-helm-chart/version": "{{ .Chart.Version }}"
+  # +docs:property
+  # annotations: {}
+
+  # Optional additional labels to add to the app's Service Account.
+  # +docs:property
+  # labels: {}
+
+  # Automount API credentials for a Service Account.
+  automountServiceAccountToken: true
+
+# Automounting API credentials for a particular pod.
+# +docs:property
+# automountServiceAccountToken: true
+
+# The exporter has no command-line flags. Configure Kubernetes credentials with
+# its ServiceAccount or KUBECONFIG through extraEnv/volumeMounts.
+
+# Extra containers to add to the pod spec in the deployment of the kube-dra-exporter app.
+# For example, to deploy the [aws_signing_helper](https://github.com/aws/rolesanywhere-credential-helper) (replacing the ARNs as relevant):
+#
+# extraEnv:
+#   - name: AWS_EC2_METADATA_SERVICE_ENDPOINT
+#   - value: http://127.0.0.1:9911
+# extraContainers:
+#   - name: rolesanywhere-credential-helper
+#     image: public.ecr.aws/rolesanywhere/credential-helper:latest
+#     command: [aws_signing_helper]
+#     args:
+#       - serve
+#       - --private-key
+#       - /etc/cert/tls.key
+#       - --certificate
+#       - /etc/cert/tls.crt
+#       - --role-arn
+#       - $ROLE_ARN
+#       - --profile-arn
+#       - $PROFILE_ARN
+#       - --trust-anchor-arn
+#       - $TRUST_ANCHOR_ARN
+#     volumeMounts:
+#       - name: cert
+#         mountPath: /etc/cert/
+#         readOnly: true
+# volumes:
+#   - name: cert
+#     secret:
+#       secretName: cert
+extraContainers: []
+
+# Additional environment variables to pass to kube-dra-exporter app binary.
+# For example:
+#  extraEnv:
+#  - name: SOME_VAR
+#    value: 'some value'
+extraEnv: []
+
+# Resources to provide to the kube-dra-exporter app pod.
+#
+# For example:
+#  requests:
+#    cpu: 10m
+#    memory: 32Mi
+#
+# For more information, see [Resource Management for Pods and Containers](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).
+resources: {}
+
+# Pod Security Context.
+# For more information, see [Configure a Security Context for a Pod or Container](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
+# +docs:property
+securityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container Security Context to be set on the app component container.
+# For more information, see [Configure a Security Context for a Pod or Container](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
+# +docs:property
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+
+# Additional volumes to add to the kube-dra-exporter app pod.
+volumes: []
+
+# Additional volume mounts to add to the kube-dra-exporter app container.
+volumeMounts: []
+
+# Optional additional annotations to add to the app Deployment.
+# +docs:property
+# deploymentAnnotations: {}
+
+# Optional additional annotations to add to the app Pods.
+# +docs:property
+# podAnnotations: {}
+
+# Optional additional labels to add to the app Pods.
+podLabels: {}
+
+# Optional annotations to add to the app Service.
+# +docs:property
+# serviceAnnotations: {}
+
+# Optional additional labels to add to the app Service.
+# +docs:property
+# serviceLabels: {}
+
+# Optionally set the IP family policy for the app Service to configure dual-stack; see [Configure dual-stack](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services).
+# +docs:property
+# serviceIPFamilyPolicy: ""
+
+# Optionally set the IP families for the app Service that should be supported, in the order in which they should be applied to ClusterIP. Can be IPv4 and/or IPv6.
+# +docs:property
+# serviceIPFamilies: []
+
+# Optional DNS settings. These are useful if you have a public and private DNS zone for
+# the same domain on Route 53. The following is an example of ensuring
+# kube-dra-exporter can access an ingress or DNS TXT records at all times.
+# Note that this requires Kubernetes 1.10 or `CustomPodDNS` feature gate enabled for
+# the cluster to work.
+
+# Pod DNS policy.
+# For more information, see [Pod's DNS Policy](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy).
+# +docs:property
+# podDnsPolicy: "None"
+
+# Pod DNS configuration. The podDnsConfig field is optional and can work with any podDnsPolicy
+# settings. However, when a Pod's dnsPolicy is set to "None", the dnsConfig field has to be specified.
+# For more information, see [Pod's DNS Config](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config).
+# +docs:property
+# podDnsConfig:
+#   nameservers:
+#     - "1.1.1.1"
+#     - "8.8.8.8"
+
+# Optional hostAliases for kube-dra-exporter-app pods. May be useful when performing ACME DNS-01 self checks.
+hostAliases: []
+# - ip: 127.0.0.1
+#   hostnames:
+#   - foo.local
+#   - bar.local
+# - ip: 10.1.2.3
+#   hostnames:
+#   - foo.remote
+#   - bar.remote
+
+# The nodeSelector on Pods tells Kubernetes to schedule Pods on the nodes with
+# matching labels.
+# For more information, see [Assigning Pods to Nodes](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/).
+#
+# This default ensures that Pods are only scheduled to Linux nodes.
+# It prevents Pods being scheduled to Windows nodes in a mixed OS cluster.
+# +docs:property
+nodeSelector:
+  kubernetes.io/os: linux
+
+# Enables default network policies for kube-dra-exporter.
+# This provides a way for you to restrict network traffic
+# between kube-dra-exporter components and other pods.
+# For more information, see [Network Policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
+# NOTE: an incorrect networkPolicy will cause traffic to be dropped
+# Requires a CNI plugin that enforces Kubernetes NetworkPolicies.
+networkPolicy:
+  # Create network policies for kube-dra-exporter.
+  enabled: false
+
+  # Ingress rule for the kube-dra-exporter network policy.
+  # By default, only Prometheus pods labeled app.kubernetes.io/name=prometheus
+  # in the exporter's namespace may scrape its http port (8080).
+  # Override the podSelector to match your scraper's actual pod labels.
+  # For cross-namespace scraping, add a namespaceSelector to the same from item
+  # as the podSelector (see prod-values.yaml for a monitoring namespace example).
+  # Set to [] to deny all ingress traffic.
+  # +docs:property
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+    ports:
+    - port: http
+      protocol: TCP
+
+
+  # Allow Kubernetes API access on TCP 443/6443 and DNS on TCP/UDP 53.
+  # Destinations are unrestricted because API and DNS addresses vary by cluster.
+  # Override these rules for destination restrictions or nonstandard API/DNS ports
+  # (including NodeLocal DNS); account for your CNI's Service DNAT behavior.
+  # Set to [] to deny all egress traffic.
+  # +docs:property
+  egress:
+  - ports:
+    - port: 443
+      protocol: TCP
+    - port: 53
+      protocol: TCP
+    - port: 53
+      protocol: UDP
+    # Common API server backend port, including OpenShift and OKD.
+    - port: 6443
+      protocol: TCP
+
+# +docs:ignore
+ingressShim: {}
+
+  # Optional default issuer to use for ingress resources.
+  # +docs:property=ingressShim.defaultIssuerName
+  # defaultIssuerName: ""
+
+  # Optional default issuer kind to use for ingress resources.
+  # +docs:property=ingressShim.defaultIssuerKind
+  # defaultIssuerKind: ""
+
+  # Optional default issuer group to use for ingress resources.
+  # +docs:property=ingressShim.defaultIssuerGroup
+  # defaultIssuerGroup: ""
+
+# Use these variables to configure the HTTP_PROXY environment variables.
+
+# Configures the HTTP_PROXY environment variable where a HTTP proxy is required.
+# +docs:property
+# http_proxy: "http://proxy:8080"
+
+# Configures the HTTPS_PROXY environment variable where a HTTP proxy is required.
+# +docs:property
+# https_proxy: "https://proxy:8080"
+
+# Configures the NO_PROXY environment variable where a HTTP proxy is required,
+# but certain domains should be excluded.
+# +docs:property
+# no_proxy: 127.0.0.1,localhost
+
+# A Kubernetes Affinity, if required. For more information, see [Affinity v1 core](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#affinity-v1-core).
+#
+# For example:
+#   affinity:
+#     nodeAffinity:
+#      requiredDuringSchedulingIgnoredDuringExecution:
+#        nodeSelectorTerms:
+#        - matchExpressions:
+#          - key: foo.bar.com/role
+#            operator: In
+#            values:
+#            - master
+affinity: {}
+
+# A Kubernetes Runtime Class, if required. For more information, see [RuntimeClass v1 node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#runtimeclass-v1-node-k8s-io)
+#
+# For example:
+#   runtimeClassName: gvisor
+# +docs:property
+runtimeClassName: ""
+
+# A list of Kubernetes Tolerations, if required. For more information, see [Toleration v1 core](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#toleration-v1-core).
+#
+# For example:
+#   tolerations:
+#   - key: foo.bar.com/role
+#     operator: Equal
+#     value: master
+#     effect: NoSchedule
+tolerations: []
+
+# A list of Kubernetes TopologySpreadConstraints, if required. For more information, see [Topology spread constraint v1 core](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#topologyspreadconstraint-v1-core
+#
+# For example:
+#   topologySpreadConstraints:
+#   - maxSkew: 2
+#     topologyKey: topology.kubernetes.io/zone
+#     whenUnsatisfiable: ScheduleAnyway
+#     labelSelector:
+#       matchLabels:
+#         app.kubernetes.io/instance: kube-dra-exporter
+#         app.kubernetes.io/component: app
+topologySpreadConstraints: []
+
+# LivenessProbe settings for the app container of the app Pod.
+#
+# Uses /healthz to check process liveness without querying the Kubernetes API.
+# Collection errors make /metrics return HTTP 500 but do not restart the process.
+# +docs:property
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 15
+  successThreshold: 1
+  failureThreshold: 8
+
+# enableServiceLinks indicates whether information about services should be
+# injected into the pod's environment variables, matching the syntax of Docker
+# links.
+enableServiceLinks: false
+
+# +docs:section=Prometheus
+
+prometheus:
+  # Enable Prometheus monitoring for the kube-dra-exporter app.
+  # If you use the Prometheus Operator, set prometheus.podmonitor.enabled or
+  # prometheus.servicemonitor.enabled, to create a PodMonitor or a
+  # ServiceMonitor resource.
+  # Otherwise, 'prometheus.io' annotations are added to the kube-dra-exporter Deployment.
+  # Note that you cannot enable both PodMonitor and ServiceMonitor as they are
+  # mutually exclusive. Enabling both will result in an error.
+  enabled: true
+
+  servicemonitor:
+    # Create a ServiceMonitor to add kube-dra-exporter to Prometheus.
+    enabled: false
+
+    # The namespace that the service monitor should live in, defaults
+    # to the kube-dra-exporter namespace.
+    # +docs:property
+    # namespace: kube-dra-exporter
+
+    # Specifies the `prometheus` label on the created ServiceMonitor. This is
+    # used when different Prometheus instances have label selectors matching
+    # different ServiceMonitors.
+    prometheusInstance: default
+
+    # The target port to set on the ServiceMonitor. This must match the port that the
+    # kube-dra-exporter app is listening on for metrics.
+    # +docs:type=string,integer
+    targetPort: http
+
+    # The path to scrape for metrics.
+    path: /metrics
+
+    # The interval to scrape metrics.
+    interval: 60s
+
+    # The timeout before a metrics scrape fails.
+    scrapeTimeout: 30s
+
+    # Additional labels to add to the ServiceMonitor.
+    labels: {}
+
+    # Additional annotations to add to the ServiceMonitor.
+    annotations: {}
+
+    # Keep labels from scraped data, overriding server-side labels.
+    honorLabels: false
+
+    selectorOverride: {}
+    
+    # EndpointAdditionalProperties allows setting additional properties on the
+    # endpoint such as relabelings, metricRelabelings etc.
+    #
+    # For example:
+    #  endpointAdditionalProperties:
+    #   relabelings:
+    #   - action: replace
+    #     sourceLabels:
+    #     - __meta_kubernetes_pod_node_name
+    #     targetLabel: instance
+    #
+    # +docs:property
+    endpointAdditionalProperties: {}
+
+  # Note that you cannot enable both PodMonitor and ServiceMonitor as they are mutually exclusive. Enabling both will result in an error.
+  podmonitor:
+    # Create a PodMonitor to add kube-dra-exporter to Prometheus.
+    enabled: false
+
+    # The namespace that the pod monitor should live in, defaults
+    # to the kube-dra-exporter namespace.
+    # +docs:property
+    # namespace: kube-dra-exporter
+
+    # Specifies the `prometheus` label on the created PodMonitor. This is
+    # used when different Prometheus instances have label selectors matching
+    # different PodMonitors.
+    prometheusInstance: default
+
+    # The path to scrape for metrics.
+    path: /metrics
+
+    # The interval to scrape metrics.
+    interval: 60s
+
+    # The timeout before a metrics scrape fails.
+    scrapeTimeout: 30s
+
+    # Additional labels to add to the PodMonitor.
+    labels: {}
+
+    # Additional annotations to add to the PodMonitor.
+    annotations: {}
+
+    # Keep labels from scraped data, overriding server-side labels.
+    honorLabels: false
+
+    selectorOverride: {}
+
+    # EndpointAdditionalProperties allows setting additional properties on the
+    # endpoint such as relabelings, metricRelabelings etc.
+    #
+    # For example:
+    #  endpointAdditionalProperties:
+    #   relabelings:
+    #   - action: replace
+    #     sourceLabels:
+    #     - __meta_kubernetes_pod_node_name
+    #     targetLabel: instance
+    #   # Configure the PodMonitor for TLS connections
+    #   scheme: https
+    #   tlsConfig:
+    #     serverName: kube-dra-exporter-metrics
+    #     ca:
+    #       secret:
+    #         name: kube-dra-exporter-metrics-ca
+    #         key: "tls.crt"
+    #
+    # +docs:property
+    endpointAdditionalProperties: {}
+
+rbac:
+  # If true, create & use RBAC resources
+  create: true
+
+  # Use an existing ClusterRole instead of creating one. A ClusterRoleBinding
+  # is still created for the exporter ServiceAccount.
+  # useExistingRole: your-existing-role
+
+  # Must remain true: collectors require cluster-wide list permissions for
+  # resourceclaims, resourceslices and deviceclasses. Namespace-only RBAC is
+  # rejected. With create=false, provide these permissions externally.
+  useClusterRole: true
+
+  # Additional rules for the generated ClusterRole.
+  # Example:
+  # - apiGroups: ["monitoring.coreos.com"]
+  #   resources: ["prometheuses"]
+  #   verbs: ["list", "watch"]
+  extraRules: []
+
+
+
+# Create dynamic manifests via values.
+#
+# For example:
+# extraObjects:
+#   - |
+#     apiVersion: v1
+#     kind: ConfigMap
+#     metadata:
+#       name: '{{ template "kube-dra-exporter.fullname" . }}-extra-configmap'
+extraObjects: []
+
+
+# Field that can be used as a condition when kube-dra-exporter is a dependency.
+# This definition is only here as a placeholder such that it is included in
+# the json schema.
+# See https://helm.sh/docs/chart_best_practices/dependencies/#conditions-and-tags
+# for more info.
+# +docs:hidden
+enabled: true

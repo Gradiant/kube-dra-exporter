@@ -1,0 +1,24 @@
+{{- if and .Values.rbac.create .Values.rbac.useClusterRole -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ template "kube-dra-exporter.fullname" . }}
+  labels:
+    app: {{ template "kube-dra-exporter.name" . }}
+    app.kubernetes.io/name: {{ template "kube-dra-exporter.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: "main"
+    {{- include "labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+{{- if .Values.rbac.useExistingRole }}
+  name: {{ .Values.rbac.useExistingRole }}
+{{- else }}
+  name: {{ template "kube-dra-exporter.fullname" . }}
+{{- end }}
+subjects:
+- kind: ServiceAccount
+  name: {{ template "kube-dra-exporter.serviceAccountName" . }}
+  namespace: {{ template "kube-dra-exporter.namespace" . }}
+{{- end -}}

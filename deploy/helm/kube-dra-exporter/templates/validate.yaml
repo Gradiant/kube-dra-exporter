@@ -1,0 +1,12 @@
+{{- if not .Values.rbac.useClusterRole }}
+{{- fail "rbac.useClusterRole=false is unsupported: collectors require cluster-wide list permissions; use a ClusterRole or set rbac.create=false with externally managed cluster-wide permissions" }}
+{{- end }}
+{{- if .Values.extraArgs }}
+{{- fail "extraArgs is unsupported: the exporter does not implement command-line flags" }}
+{{- end }}
+{{- if .Values.featureGates }}
+{{- fail "featureGates is unsupported by the exporter" }}
+{{- end }}
+{{- if hasKey .Values "maxConcurrentChallenges" }}
+{{- fail "maxConcurrentChallenges is unsupported by the exporter" }}
+{{- end }}

@@ -1,0 +1,7 @@
+.git
+.dist
+.agents
+.codex
+.aws
+**/__pycache__
+/kube-dra-exporter

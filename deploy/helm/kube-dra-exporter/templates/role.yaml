@@ -1,0 +1,22 @@
+{{- if and (eq .Values.rbac.create true) (not .Values.rbac.useExistingRole) -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ template "kube-dra-exporter.fullname" . }}
+  labels:
+    app: {{ template "kube-dra-exporter.name" . }}
+    app.kubernetes.io/name: {{ template "kube-dra-exporter.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: "main"
+    {{- include "labels" . | nindent 4 }}
+rules:
+- apiGroups: ["resource.k8s.io"]
+  resources:
+  - resourceclaims
+  - resourceslices
+  - deviceclasses
+  verbs: ["list"]
+{{ if .Values.rbac.extraRules }}
+{{ toYaml .Values.rbac.extraRules }}
+{{ end }}
+{{- end -}}

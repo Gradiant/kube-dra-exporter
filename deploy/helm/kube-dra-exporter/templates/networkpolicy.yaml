@@ -1,0 +1,24 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ template "kube-dra-exporter.fullname" . }}
+  namespace: {{ include "kube-dra-exporter.namespace" . }}
+  labels:
+    app: {{ template "kube-dra-exporter.name" . }}
+    app.kubernetes.io/name: {{ template "kube-dra-exporter.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: "main"
+    {{- include "labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ template "kube-dra-exporter.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: "main"
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: {{ toYaml .Values.networkPolicy.ingress | nindent 4 }}
+  egress: {{ toYaml .Values.networkPolicy.egress | nindent 4 }}
+{{- end }}

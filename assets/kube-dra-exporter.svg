@@ -1,0 +1,16 @@
+<!-- Copyright 2026 Gradiant. SPDX-License-Identifier: Apache-2.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"
+     role="img" aria-labelledby="title desc">
+  <title id="title">kube-dra-exporter</title>
+  <desc id="desc">A blue resource cube with a green monitoring pulse in a circular badge.</desc>
+  <g stroke="#2563eb" stroke-width="5" stroke-linejoin="round">
+    <path fill="#dbeafe" d="M54 12 94 35 54 58 14 35Z"/>
+    <path fill="#93c5fd" d="M14 35 54 58 54 104 14 81Z"/>
+    <path fill="#3b82f6" d="M54 58 94 35 94 81 54 104Z"/>
+  </g>
+  <circle cx="88" cy="88" r="29" fill="#ffffff"/>
+  <circle cx="88" cy="88" r="25" fill="#0f172a"/>
+  <path d="M70 88h8l6-13 8 26 6-13h8" fill="none"
+        stroke="#34d399" stroke-width="5" stroke-linecap="round"
+        stroke-linejoin="round"/>
+</svg>

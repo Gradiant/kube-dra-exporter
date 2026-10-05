@@ -1,0 +1,24 @@
+# Inherit the GitHub Container Registry image repository from values.yaml.
+image:
+  pullPolicy: Always
+networkPolicy:
+  # Enable after verifying that the CNI enforces NetworkPolicies.
+  enabled: false
+  # Match the actual scraper pods, independently of the ServiceMonitor's labels.
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: monitoring
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+    ports:
+    - port: http
+      protocol: TCP
+prometheus:
+  servicemonitor:
+    enabled: true
+    labels:
+      release: kube-prometheus-stack
+    namespace: monitoring
